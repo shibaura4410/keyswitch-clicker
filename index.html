@@ -276,7 +276,7 @@
   .ups-note { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); margin: 0 4px 6px; }
   .ups-note button { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
   .ups-note button:hover { border-color: var(--accent); }
-  #upsList h2:first-child { margin-top: 0; }
+  #upsList h2:first-child, #achGrid h2:first-child { margin-top: 0; }
   #comboBox b { color: var(--accent); }
   /* フィーバー */
   .fever {
@@ -616,7 +616,7 @@
     <h2 id="achTitle">実績</h2>
     <button class="dlg-close" type="button" data-close>閉じる</button>
   </div>
-  <div class="ach-grid" id="achGrid"></div>
+  <div id="achGrid"></div>
 </dialog>
 <div class="toast" id="toast" role="status"></div>
 
@@ -749,6 +749,80 @@
     { id: 'up10', ico: '🥋', name: '免許皆伝', desc: '強化を10個習得する', ok: () => upCount() >= 10 },
     { id: 'up30', ico: '🐉', name: '奥義', desc: '強化を30個習得する', ok: () => upCount() >= 30 },
     { id: 'combo50', ico: '🥁', name: '乱れ打ち', desc: '連打ボーナスを +50% まで伸ばす', ok: () => S.maxCombo >= 50 },
+    // --- ここから下は追加ぶん。同じ系統の上位の実績を、数字を上げながら並べている ---
+    // 叩く
+    { id: 'hit100k', ico: '🦾', name: '指が覚えている', desc: '100,000回叩く', ok: () => S.clicks >= 1e5 },
+    { id: 'hit1m', ico: '🏔️', name: '百万打', desc: '1,000,000回叩く', ok: () => S.clicks >= 1e6 },
+    { id: 'keys1000', ico: '🎹', name: 'ブラインドタッチ', desc: 'キーボードで1,000回叩く', ok: () => S.keys >= 1000 },
+    { id: 'keys10000', ico: '✍️', name: '速記者', desc: 'キーボードで10,000回叩く', ok: () => S.keys >= 10000 },
+    { id: 'crit1000', ico: '🗡️', name: '必殺仕事人', desc: '会心を1,000回出す', ok: () => S.crits >= 1000 },
+    { id: 'crit10000', ico: '⚔️', name: '一撃必殺', desc: '会心を10,000回出す', ok: () => S.crits >= 10000 },
+    { id: 'combo100', ico: '🌪️', name: '千手', desc: '連打ボーナスを +100% まで伸ばす', ok: () => S.maxCombo >= 100 },
+    { id: 'combo200', ico: '⚡', name: '雷鳴', desc: '連打ボーナスを +200% まで伸ばす', ok: () => S.maxCombo >= 200 },
+    { id: 'dmg100', ico: '🪨', name: '重い一撃', desc: '1打で100ダメージ', ok: () => S.maxHit >= 100 },
+    { id: 'dmg1e4', ico: '💢', name: '痛恨の一撃', desc: '1打で1万ダメージ', ok: () => S.maxHit >= 1e4 },
+    { id: 'dmg1e6', ico: '☄️', name: '隕石', desc: '1打で100万ダメージ', ok: () => S.maxHit >= 1e6 },
+    { id: 'dmg1e8', ico: '🌋', name: '天変地異', desc: '1打で1億ダメージ', ok: () => S.maxHit >= 1e8 },
+    { id: 'cp100', ico: '💪', name: '腕っぷし', desc: '1打の威力100', ok: () => clickPower() >= 100 },
+    { id: 'cp1e4', ico: '🦍', name: '怪力', desc: '1打の威力1万', ok: () => clickPower() >= 1e4 },
+    { id: 'cp1e6', ico: '🗿', name: '剛腕', desc: '1打の威力100万', ok: () => clickPower() >= 1e6 },
+    // 壊す
+    { id: 'break100', ico: '🏗️', name: '解体工場', desc: 'スイッチを累計100個壊す', ok: () => S.brokenAll >= 100 },
+    { id: 'break360', ico: '⛰️', name: '部品の山', desc: 'スイッチを累計360個壊す', ok: () => S.brokenAll >= 360 },
+    { id: 'break1000', ico: '🌌', name: '千のスイッチ', desc: 'スイッチを累計1,000個壊す', ok: () => S.brokenAll >= 1000 },
+    { id: 'kb5', ico: '🧹', name: '掃除屋', desc: 'キーボードを累計5台壊しきる', ok: () => S.kbAll >= 5 },
+    { id: 'kb10', ico: '🚛', name: '廃品回収', desc: 'キーボードを累計10台壊しきる', ok: () => S.kbAll >= 10 },
+    { id: 'kb20', ico: '🏭', name: 'リサイクル工場', desc: 'キーボードを累計20台壊しきる', ok: () => S.kbAll >= 20 },
+    { id: 'axes5', ico: '🎚️', name: '軸コレクター', desc: '軸を5種類そろえる', ok: () => S.kbAll >= 4 },
+    { id: 'lvl100', ico: '🧭', name: '長旅', desc: '1回の周回で100個目のキーに届く', ok: () => S.level >= 100 },
+    { id: 'lvl200', ico: '🗺️', name: '果てしない旅', desc: '1回の周回で200個目のキーに届く', ok: () => S.level >= 200 },
+    // スクラップ
+    { id: 'scrap1e4', ico: '👛', name: 'へそくり', desc: 'スクラップを累計1万', ok: () => S.total >= 1e4 },
+    { id: 'scrap1e10', ico: '💎', name: 'スクラップ財閥', desc: 'スクラップを累計100億', ok: () => S.total >= 1e10 },
+    { id: 'scrap1e12', ico: '🏰', name: 'スクラップ帝国', desc: 'スクラップを累計1兆', ok: () => S.total >= 1e12 },
+    { id: 'scrap1e16', ico: '🪐', name: 'スクラップ銀河', desc: 'スクラップを累計1京', ok: () => S.total >= 1e16 },
+    // 道具
+    { id: 'dps100', ico: '🪑', name: '手放し運転', desc: '毎秒ダメージ100', ok: () => autoPower() >= 100 },
+    { id: 'dps1e4', ico: '🛏️', name: '寝ながら解体', desc: '毎秒ダメージ1万', ok: () => autoPower() >= 1e4 },
+    { id: 'dps1e6', ico: '🏝️', name: '不労所得', desc: '毎秒ダメージ100万', ok: () => autoPower() >= 1e6 },
+    { id: 'dps1e8', ico: '🚀', name: '全自動の極み', desc: '毎秒ダメージ1億', ok: () => autoPower() >= 1e8 },
+    { id: 'own100', ico: '🎒', name: '道具持ち', desc: '工具と自動破壊を合わせて100個持つ', ok: () => ownedAll() >= 100 },
+    { id: 'own500', ico: '📦', name: '倉庫番', desc: '工具と自動破壊を合わせて500個持つ', ok: () => ownedAll() >= 500 },
+    { id: 'own1000', ico: '🏬', name: '問屋', desc: '工具と自動破壊を合わせて1,000個持つ', ok: () => ownedAll() >= 1000 },
+    { id: 'critmax', ico: '🏹', name: '百発百中', desc: '急所ねらいを最大まで上げる', ok: () => lv('crit') >= 25 },
+    // 強化
+    { id: 'up50', ico: '🧙', name: '達人', desc: '強化を50個習得する', ok: () => upCount() >= 50 },
+    { id: 'upall', ico: '🎓', name: '極めし者', desc: '強化をすべて習得する', ok: () => upCount() >= UPGRADES.length },
+    // 周回・金のキー
+    { id: 'ps10', ico: '🔁', name: '常連', desc: '周回を10回する', ok: () => S.prestiges >= 10 },
+    { id: 'ps25', ico: '♾️', name: '終わらない解体', desc: '周回を25回する', ok: () => S.prestiges >= 25 },
+    { id: 'bp10', ico: '📐', name: '設計士', desc: '設計図を10枚持つ', ok: () => S.bp >= 10 },
+    { id: 'bp100', ico: '📚', name: '設計事務所', desc: '設計図を100枚持つ', ok: () => S.bp >= 100 },
+    { id: 'bp1000', ico: '🏛️', name: '設計図書館', desc: '設計図を1,000枚持つ', ok: () => S.bp >= 1000 },
+    { id: 'gold5', ico: '✨', name: '目ざとい', desc: '金のキーを5回押す', ok: () => S.gold >= 5 },
+    { id: 'gold100', ico: '🏆', name: '黄金の指', desc: '金のキーを100回押す', ok: () => S.gold >= 100 },
+    // 時間
+    { id: 'time10m', ico: '⏱️', name: 'ひと休み', desc: '10分遊ぶ', ok: () => S.playSec >= 600 },
+    { id: 'time1h', ico: '🕐', name: '没頭', desc: '1時間遊ぶ', ok: () => S.playSec >= 3600 },
+    { id: 'time5h', ico: '🌙', name: '夜ふかし', desc: '5時間遊ぶ', ok: () => S.playSec >= 18000 },
+    { id: 'time24h', ico: '🌅', name: '丸一日', desc: '24時間遊ぶ', ok: () => S.playSec >= 86400 },
+  ];
+  // 工具・自動破壊ごとに、50個と100個の実績を足す
+  for (const it of ITEMS) {
+    if (it.kind === 'crit') continue;
+    ACH.push({ id: it.id + '50', ico: it.ico, name: `${it.name}の達人`, desc: `${it.name}を50個持つ`, ok: () => lv(it.id) >= 50 });
+    ACH.push({ id: it.id + '100', ico: it.ico, name: `${it.name}の鬼`, desc: `${it.name}を100個持つ`, ok: () => lv(it.id) >= 100 });
+  }
+  const ownedAll = () => ITEMS.reduce((a, i) => a + (i.kind === 'crit' ? 0 : lv(i.id)), 0);
+  // 一覧での見出し。id の頭の文字で分ける
+  const ACH_CATS = [
+    ['叩く', /^(hit|fast|keys|crit\d|combo|dmg|cp)/],
+    ['壊す', /^(break|kb|allaxes|axes|lvl)/],
+    ['スクラップ', /^scrap/],
+    ['道具', /^(tools|autos|cat10|dps|own|critmax|finger|puller|driver|hammer|drill|cat|coffee|rage|solder|press|laser)/],
+    ['強化', /^up/],
+    ['周回・金のキー', /^(ps|bp|gold)/],
+    ['時間', /^time/],
   ];
   const SAVE_KEY = 'keyswitch-crusher-v2';
 
@@ -1353,14 +1427,26 @@
 
   // ---------- 実績 ----------
   const achEls = {};
+  const achHeads = [];
   function buildAch() {
-    for (const a of ACH) {
-      const d = document.createElement('div');
-      d.className = 'badge';
-      d.innerHTML = `<span class="ico" aria-hidden="true">${a.ico}</span>
-        <span><div class="nm">${a.name}</div><div class="ds">${a.desc}</div></span>`;
-      $('achGrid').appendChild(d);
-      achEls[a.id] = d;
+    const left = ACH.slice();
+    for (const [title, pat] of ACH_CATS.concat([['そのほか', /./]])) {
+      const mine = left.filter(a => pat.test(a.id));
+      if (!mine.length) continue;
+      for (const a of mine) left.splice(left.indexOf(a), 1);
+      const h = document.createElement('h2');
+      const g = document.createElement('div');
+      g.className = 'ach-grid';
+      for (const a of mine) {
+        const d = document.createElement('div');
+        d.className = 'badge';
+        d.innerHTML = `<span class="ico" aria-hidden="true">${a.ico}</span>
+          <span><div class="nm">${a.name}</div><div class="ds">${a.desc}</div></span>`;
+        g.appendChild(d);
+        achEls[a.id] = d;
+      }
+      $('achGrid').append(h, g);
+      achHeads.push({ h, title, mine });
     }
     renderAch();
   }
@@ -1372,6 +1458,9 @@
       achEls[a.id].classList.toggle('on', on);
     }
     achOwned = n;
+    for (const { h, title, mine } of achHeads) {
+      h.textContent = `${title} ${mine.filter(a => S.ach[a.id]).length} / ${mine.length}`;
+    }
     $('achTitle').textContent = `実績 ${n} / ${ACH.length}`;
     $('achN').textContent = `${n}/${ACH.length}`;
     renderAxes();
