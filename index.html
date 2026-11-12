@@ -607,7 +607,7 @@
     <h2 id="psTitle">周回</h2>
     <button class="dlg-close" type="button" data-close>閉じる</button>
   </div>
-  <p class="ps-text">周回すると、スクラップ・工具・自動破壊・強化・キーボードの進み具合を手放して、最初の「A」からやり直します。代わりに<b>設計図</b>を受け取り、1 枚につきすべてのダメージが永久に +5% されます。実績・軸・統計・設計図は残ります。</p>
+  <p class="ps-text">周回すると、スクラップ・工具・自動破壊・強化・キーボードの進み具合を手放して、最初の「A」からやり直します。代わりに毎回<b>設計図</b>を 3 枚受け取り、すべてのダメージが永久に +15% されます(1 枚につき +5%、周回のたびに積み上がります)。実績・軸・統計・設計図は残ります。</p>
   <table class="stats" id="psBody"></table>
   <button class="ps-go" id="psGo" type="button">周回する</button>
 </dialog>
@@ -798,7 +798,7 @@
     { id: 'ps25', ico: '♾️', name: '終わらない解体', desc: '周回を25回する', ok: () => S.prestiges >= 25 },
     { id: 'bp10', ico: '📐', name: '設計士', desc: '設計図を10枚持つ', ok: () => S.bp >= 10 },
     { id: 'bp100', ico: '📚', name: '設計事務所', desc: '設計図を100枚持つ', ok: () => S.bp >= 100 },
-    { id: 'bp1000', ico: '🏛️', name: '設計図書館', desc: '設計図を1,000枚持つ', ok: () => S.bp >= 1000 },
+    { id: 'bp1000', ico: '🏛️', name: '設計図書館', desc: '設計図を300枚持つ', ok: () => S.bp >= 300 },
     { id: 'gold5', ico: '✨', name: '目ざとい', desc: '金のキーを5回押す', ok: () => S.gold >= 5 },
     { id: 'gold100', ico: '🏆', name: '黄金の指', desc: '金のキーを100回押す', ok: () => S.gold >= 100 },
     // 時間
@@ -888,10 +888,9 @@
   }
   recalc();
   let achOwned = ACH.filter(a => S.ach[a.id]).length; // 持っている実績の数。renderAch で更新する
-  // 周回: 累計スクラップに応じて設計図がもらえる。1枚につき全ダメージ +5%
-  const BP_UNIT = 2e4, BP_BONUS = 0.05;
-  const bpFor = total => Math.floor(Math.sqrt(total / BP_UNIT));
-  const bpGain = () => Math.max(0, bpFor(S.total) - S.bp);
+  // 周回: 1回ごとに決まった枚数の設計図がもらえる。1枚につき全ダメージ +5%
+  const BP_PER_RUN = 3, BP_BONUS = 0.05; // 周回1回で設計図3枚 = 全ダメージ +15%
+  const bpGain = () => BP_PER_RUN;
   // フィーバー: 金のキーを押すと一定時間かかる。{ name, all, click, until }
   let fever = null;
   const allMult = () => M.kb * (1 + achOwned * M.achPct) * (1 + S.bp * BP_BONUS) * (fever ? fever.all : 1); // クリックにも自動破壊にも掛かる倍率
@@ -1613,19 +1612,17 @@
   }
 
   // ---------- 周回 ----------
-  const canPrestige = () => bpGain() >= 1 && kbCount() >= 1;
+  const canPrestige = () => kbCount() >= 1;
   function renderPs() {
     const g = bpGain();
-    const next = Math.pow(S.bp + g + 1, 2) * BP_UNIT - S.total; // 次の1枚に必要な残りスクラップ
     fillTable('psBody', [
       ['持っている設計図', `${fmt(S.bp)} 枚(${pct(S.bp * BP_BONUS)})`],
-      ['いま周回するともらえる設計図', `${fmt(g)} 枚`],
+      ['周回 1 回でもらえる設計図', `${fmt(g)} 枚(${pct(g * BP_BONUS)})`],
       ['周回後のダメージ', pct((S.bp + g) * BP_BONUS)],
-      ['次の 1 枚まで', 'あと ' + fmt(Math.max(0, next)) + ' スクラップ'],
     ]);
     $('psGo').disabled = !canPrestige();
     $('psGo').textContent = kbCount() < 1 ? 'キーボードを 1 台壊しきると周回できます'
-      : g < 1 ? 'まだ設計図がもらえません' : `周回する(設計図 +${fmt(g)})`;
+      : `周回する(設計図 +${fmt(g)}、ダメージ ${pct(g * BP_BONUS)})`;
   }
   function resetRun() {
     S.scrap = 0; S.owned = {}; S.ups = {}; S.level = 1; S.broken = 0; S.runTotal = 0;
