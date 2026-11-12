@@ -565,7 +565,7 @@
         </svg>
       </button>
     </div>
-    <div class="hint">クリック・タップ、またはキーボードを叩いて破壊！与えたダメージがそのままスクラップになります</div>
+    <div class="hint">クリック・タップで破壊！与えたダメージがそのままスクラップになります</div>
   </section>
 
   <aside class="shop" id="shop" aria-label="ショップ">
@@ -652,12 +652,12 @@
     { id: 'hammer', kind: 'click', ico: '🔨', name: 'ハンマー', val: 120, base: 15000 },
     { id: 'drill', kind: 'click', ico: '🛠️', name: '電動ドリル', val: 600, base: 150000 },
     { id: 'crit', kind: 'crit', ico: '🎯', name: '急所ねらい', val: 2, base: 250, growth: 1.3, max: 25 },
-    { id: 'cat', kind: 'auto', ico: '🐈', name: 'キーボードに乗る猫', val: 1, base: 30 },
-    { id: 'coffee', kind: 'auto', ico: '☕', name: 'こぼれたコーヒー', val: 6, base: 400 },
-    { id: 'rage', kind: 'auto', ico: '👊', name: '台パン', val: 30, base: 3500 },
-    { id: 'solder', kind: 'auto', ico: '🔥', name: 'はんだごて', val: 150, base: 30000 },
-    { id: 'press', kind: 'auto', ico: '🏭', name: '油圧プレス', val: 800, base: 250000 },
-    { id: 'laser', kind: 'auto', ico: '🛰️', name: '衛星レーザー', val: 4500, base: 2500000 },
+    { id: 'cat', kind: 'auto', ico: '🐈', name: 'キーボードに乗る猫', val: 5, base: 30 },
+    { id: 'coffee', kind: 'auto', ico: '☕', name: 'こぼれたコーヒー', val: 30, base: 400 },
+    { id: 'rage', kind: 'auto', ico: '👊', name: '台パン', val: 150, base: 3500 },
+    { id: 'solder', kind: 'auto', ico: '🔥', name: 'はんだごて', val: 750, base: 30000 },
+    { id: 'press', kind: 'auto', ico: '🏭', name: '油圧プレス', val: 4000, base: 250000 },
+    { id: 'laser', kind: 'auto', ico: '🛰️', name: '衛星レーザー', val: 22500, base: 2500000 },
   ];
   const SECTIONS = [
     ['click', '工具(1打の威力)'],
@@ -729,7 +729,6 @@
     { id: 'hit1000', ico: '⚾', name: '千本ノック', desc: '1,000回叩く', ok: () => S.clicks >= 1000 },
     { id: 'hit10000', ico: '🩹', name: '腱鞘炎予備軍', desc: '10,000回叩く', ok: () => S.clicks >= 10000 },
     { id: 'fast', ico: '💨', name: '目にも止まらぬ', desc: '1秒間に10回叩く', ok: () => S.fast },
-    { id: 'keys100', ico: '⌨️', name: 'タイピスト', desc: 'キーボードで100回叩く', ok: () => S.keys >= 100 },
     { id: 'crit1', ico: '🎯', name: '会心の手応え', desc: '会心を出す', ok: () => S.crits >= 1 },
     { id: 'crit100', ico: '💥', name: '急所マニア', desc: '会心を100回出す', ok: () => S.crits >= 100 },
     { id: 'break1', ico: '🧩', name: '初破壊', desc: '最初のスイッチを壊す', ok: () => S.brokenAll >= 1 },
@@ -757,8 +756,6 @@
     // 叩く
     { id: 'hit100k', ico: '🦾', name: '指が覚えている', desc: '100,000回叩く', ok: () => S.clicks >= 1e5 },
     { id: 'hit1m', ico: '🏔️', name: '百万打', desc: '1,000,000回叩く', ok: () => S.clicks >= 1e6 },
-    { id: 'keys1000', ico: '🎹', name: 'ブラインドタッチ', desc: 'キーボードで1,000回叩く', ok: () => S.keys >= 1000 },
-    { id: 'keys10000', ico: '✍️', name: '速記者', desc: 'キーボードで10,000回叩く', ok: () => S.keys >= 10000 },
     { id: 'crit1000', ico: '🗡️', name: '必殺仕事人', desc: '会心を1,000回出す', ok: () => S.crits >= 1000 },
     { id: 'crit10000', ico: '⚔️', name: '一撃必殺', desc: '会心を10,000回出す', ok: () => S.crits >= 10000 },
     { id: 'combo100', ico: '🌪️', name: '千手', desc: '連打ボーナスを +100% まで伸ばす', ok: () => S.maxCombo >= 100 },
@@ -1599,7 +1596,6 @@
       ['実績', `${achOwned} / ${ACH.length}`],
       ['叩く'],
       ['叩いた回数', fmt(S.clicks)],
-      ['うちキーボードで', fmt(S.keys)],
       ['会心の回数', fmt(S.crits)],
       ['1打の最高ダメージ', fmt(S.maxHit)],
       ['連打ボーナスの最高', '+' + S.maxCombo + '%'],
@@ -1693,18 +1689,6 @@
       if (e.target === d || e.target.closest('[data-close]')) d.close(); // 外側か「閉じる」で閉じる
     });
   }
-
-  window.addEventListener('keydown', e => {
-    if (document.querySelector('dialog[open]')) return; // 小窓を開いている間は叩かない
-    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (e.key === 'Tab' || e.key === 'Escape' || /^F\d+$/.test(e.key)) return;
-    const ae = document.activeElement;
-    const onControl = ae && ae !== el.sw && ae.tagName === 'BUTTON';
-    if (onControl && (e.key === 'Enter' || e.key === ' ')) return; // ボタンの操作を優先
-    if (e.key.length === 1 || e.key === 'Enter' || e.key === 'Backspace') e.preventDefault();
-    S.keys++;
-    hit(null, null);
-  });
 
   function drawBuyMode() {
     for (const b of $('buyMode').querySelectorAll('button')) {
