@@ -216,6 +216,22 @@
   .stage .kbd-wrap { order: 1; margin: 0 0 10px; }
   .stage .hint { order: 2; }
   .shop-title { font-size: 18px; font-weight: 800; text-align: center; letter-spacing: .2em; margin: 2px 0 10px; }
+  .buy-mode { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; }
+  .buy-mode span { font-size: 12px; color: var(--muted); margin-right: 2px; white-space: nowrap; }
+  .buy-mode button {
+    flex: 1;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 6px 0;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .buy-mode button:hover { border-color: var(--accent); }
+  .buy-mode button[aria-pressed="true"] { border-color: var(--accent); background: #3a3324; color: var(--accent); }
+  .item .cost small { color: var(--muted); font-weight: 600; margin-right: 6px; }
   .shop { grid-column: 2; grid-row: 2; }
   .shop {
     background: var(--panel);
@@ -491,6 +507,13 @@
 
   <aside class="shop" id="shop" aria-label="ショップ">
     <div class="shop-title">ショップ</div>
+    <div class="buy-mode" id="buyMode" role="group" aria-label="まとめ買いの個数">
+      <span>まとめ買い</span>
+      <button type="button" data-n="1">×1</button>
+      <button type="button" data-n="10">×10</button>
+      <button type="button" data-n="100">×100</button>
+      <button type="button" data-n="max">全財産</button>
+    </div>
   </aside>
 </div>
 
@@ -621,7 +644,7 @@
   const fresh = () => ({
     scrap: 0, total: 0, broken: 0, level: 1, hp: 0,
     clicks: 0, crits: 0, keys: 0, fast: false,
-    owned: {}, ups: {}, ach: {}, sw: 'blue', sound: true,
+    owned: {}, ups: {}, ach: {}, sw: 'blue', buy: 1, sound: true,
   });
   let S = fresh();
   try {
@@ -635,7 +658,23 @@
   const lv = id => S.owned[id] || 0;
   const kbCount = () => Math.floor((S.level - 1) / ORDER.length); // 壊しきったキーボードの台数
   const curType = () => SWITCH_TYPES.find(t => t.id === S.sw && kbCount() >= t.need) || SWITCH_TYPES[0];
-  const cost = it => Math.floor(it.base * Math.pow(it.growth || 1.15, lv(it.id)));
+  const costAt = (it, level) => Math.floor(it.base * Math.pow(it.growth || 1.15, level));
+  // いまの「まとめ買い」設定で買う個数 n と合計額。S.buy は 1・10・100、または 'max'(全財産で買えるだけ)
+  function bundle(it) {
+    const have = lv(it.id);
+    const room = it.max ? it.max - have : Infinity;
+    const all = S.buy === 'max';
+    const want = Math.min(room, all ? 1000 : S.buy);
+    let n = 0, total = 0;
+    while (n < want) {
+      const c = costAt(it, have + n);
+      if (all && total + c > S.scrap) break;
+      total += c;
+      n++;
+    }
+    if (n === 0 && room > 0) total = costAt(it, have); // 全財産でも1個に届かないときは、1個の値段を見せる
+    return { n, cost: total };
+  }
 
   // 強化による倍率。買ったときと読み込んだときに作り直す
   let M;
@@ -1028,10 +1067,10 @@
     save();
   }
   function buy(it) {
-    const c = cost(it);
-    if (S.scrap < c || (it.max && lv(it.id) >= it.max)) return;
-    S.scrap -= c;
-    S.owned[it.id] = lv(it.id) + 1;
+    const { n, cost } = bundle(it);
+    if (n < 1 || S.scrap < cost) return;
+    S.scrap -= cost;
+    S.owned[it.id] = lv(it.id) + n;
     bought();
   }
   function buyUp(u) {
@@ -1080,9 +1119,11 @@
       const e = itemEls[it.id];
       const maxed = it.max && lv(it.id) >= it.max;
       setText(e.ds, descOf(it));
-      setText(e.cost, maxed ? '最大' : fmt(cost(it)));
+      const { n, cost } = bundle(it);
+      const html = maxed ? '最大' : (S.buy === 1 ? '' : `<small>×${Math.max(n, 1)}</small>`) + fmt(cost);
+      if (e.cost.innerHTML !== html) e.cost.innerHTML = html;
       setText(e.lv, '所持 ' + lv(it.id));
-      e.b.disabled = maxed || S.scrap < cost(it);
+      e.b.disabled = maxed || n < 1 || S.scrap < cost;
     }
     renderUps();
     dirty = false;
@@ -1195,6 +1236,21 @@
     hit(null, null);
   });
 
+  function drawBuyMode() {
+    for (const b of $('buyMode').querySelectorAll('button')) {
+      b.setAttribute('aria-pressed', String(b.dataset.n === String(S.buy)));
+    }
+  }
+  $('buyMode').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    S.buy = b.dataset.n === 'max' ? 'max' : Number(b.dataset.n);
+    drawBuyMode();
+    render();
+    save();
+    if (e.detail > 0) b.blur();
+  });
+
   function drawSoundBtn() {
     el.btnSound.textContent = S.sound ? '🔊 音' : '🔇 音';
     el.btnSound.setAttribute('aria-pressed', String(S.sound));
@@ -1209,6 +1265,7 @@
     const sound = S.sound;
     S = fresh();
     S.sound = sound;
+    drawBuyMode();
     S.hp = maxHp(1);
     parts = [];
     hitTimes = [];
@@ -1238,7 +1295,9 @@
   }
 
   // ---------- 開始 ----------
+  if (![1, 10, 100, 'max'].includes(S.buy)) S.buy = 1;
   buildShop();
+  drawBuyMode();
   buildKbd();
   buildAxes();
   buildAch();
