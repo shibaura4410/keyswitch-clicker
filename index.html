@@ -174,6 +174,9 @@
   #switch svg { width: 100%; height: 100%; display: block; overflow: visible; }
   #switch .mv { transition: transform .06s ease-out; }
   #switch.down .mv { transform: translateY(15px); transition-duration: .02s; }
+  /* ばね: 下端を固定したまま、軸が下がるぶん(15px)だけ縮む。離すと少し行き過ぎてから戻る */
+  #spring { transform-box: fill-box; transform-origin: 50% 100%; transition: transform .16s cubic-bezier(.3, 2.2, .5, 1); }
+  #switch.down #spring { transform: scaleY(.5); transition: transform .02s linear; }
   #switch.shake svg { animation: shake .12s linear; }
   #switch.spawn { animation: spawn .22s cubic-bezier(.2, 1.4, .4, 1); }
   @keyframes shake {
@@ -466,8 +469,8 @@
             <rect x="90" y="184" width="60" height="20" rx="3" fill="url(#gRound)"/>
             <rect x="101" y="176" width="38" height="8" fill="#000" opacity=".35"/>
           </g>
-          <!-- ばね(透明な上ハウジング越しに見える) -->
-          <path d="M106 205 L134 208 L106 211 L134 214 L106 217 L134 220 L106 223" fill="none" stroke="#d8cfae" stroke-width="2" stroke-linejoin="round" opacity=".75"/>
+          <!-- ばね(透明な上ハウジング越しに見える)。上端は軸の中、下端は下ハウジングの中に隠れる -->
+          <path id="spring" d="M106 196 L134 199 L106 202 L134 205 L106 208 L134 211 L106 214 L134 217 L106 220 L134 223 L106 226" fill="none" stroke="#e2d9b6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" opacity=".85"/>
           <!-- 上ハウジング: 透明 -->
           <path d="M70 188 H170 L188 222 H52 Z" fill="#eaf6ff" opacity=".2"/>
           <path d="M74 191 H97 L86 220 H59 Z" fill="#fff" opacity=".16"/>
