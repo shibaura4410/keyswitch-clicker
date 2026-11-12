@@ -273,7 +273,11 @@
   .item.up { border-style: dashed; }
   .item.up .cost { color: var(--good); }
   .item.up.locked .cost { color: var(--muted); }
-  .ups-note { font-size: 11px; color: var(--muted); margin: 0 4px 6px; text-align: right; }
+  .ups-note { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); margin: 0 4px 6px; }
+  .ups-note button { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
+  .ups-note button:hover { border-color: var(--accent); }
+  #upsList h2:first-child { margin-top: 0; }
+  #comboBox b { color: var(--accent); }
   .axis-note { font-size: 11px; color: var(--muted); margin: 0 4px 8px; }
   .axes { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
   .axis {
@@ -409,6 +413,7 @@
       <span>毎秒 <b id="perSec">0</b></span>
       <span>会心 <b id="critRate">5%</b></span>
       <span>破壊数 <b id="broken">0</b></span>
+      <span id="comboBox" hidden>連打 <b id="combo">+0%</b></span>
     </div>
 
     <div class="kbd-wrap">
@@ -530,6 +535,13 @@
   <div class="axis-note">最初は青軸だけ。キーボードを1台壊しきるたびに、新しい軸が1つ手に入ります。軸を替えて変わるのは打鍵音だけです。</div>
   <div class="axes" id="axes"></div>
 </dialog>
+<dialog class="dlg" id="dlgUps" aria-labelledby="upsTitle">
+  <div class="dlg-head">
+    <h2 id="upsTitle">強化一覧</h2>
+    <button class="dlg-close" type="button" data-close>閉じる</button>
+  </div>
+  <div id="upsList"></div>
+</dialog>
 <dialog class="dlg" id="dlgAch" aria-labelledby="achTitle">
   <div class="dlg-head">
     <h2 id="achTitle">実績</h2>
@@ -585,8 +597,10 @@
   ];
 
   // 1回かぎりの強化。req を満たすと買えるようになる
-  const TIER_REQ = [10, 25, 50], TIER_COST = [12, 150, 2500], TIER_NAME = ['改', '真', '極'];
-  const ROMAN = ['I', 'II', 'III', 'IV'];
+  // 工具・自動破壊ごとの強化は6段。値段は、その個数に届くころの1個の値段のおよそ2〜3倍
+  const TIER_REQ = [10, 25, 50, 100, 150, 200], TIER_COST = [12, 150, 2500, 3e6, 3e9, 3e12];
+  const TIER_NAME = ['改', '真', '極', '神', '超', '絶'];
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
   const UPGRADES = [];
   for (const it of ITEMS) {
     if (it.kind === 'crit') continue;
@@ -596,17 +610,17 @@
       cost: it.base * TIER_COST[k], need: `${it.name}を${req}個`, req: () => lv(it.id) >= req,
     }));
   }
-  [[5, 5000], [20, 400000], [50, 3e7], [100, 3e9]].forEach(([n, c], k) => UPGRADES.push({
+  [[5, 5000], [20, 400000], [50, 3e7], [100, 3e9], [180, 3e11], [300, 3e13]].forEach(([n, c], k) => UPGRADES.push({
     id: 'gclick' + k, ico: '⚒️', group: 'gclick',
     name: '工具の焼き入れ ' + ROMAN[k], desc: 'すべての工具の威力 2倍',
     cost: c, need: `スイッチを${n}個破壊`, req: () => S.broken >= n,
   }));
-  [[10, 20000], [30, 1.5e6], [70, 1e8], [140, 1e10]].forEach(([n, c], k) => UPGRADES.push({
+  [[10, 20000], [30, 1.5e6], [70, 1e8], [140, 1e10], [220, 1e12], [320, 1e14]].forEach(([n, c], k) => UPGRADES.push({
     id: 'gauto' + k, ico: '⚡', group: 'gauto',
     name: '過負荷運転 ' + ROMAN[k], desc: 'すべての自動破壊 2倍',
     cost: c, need: `スイッチを${n}個破壊`, req: () => S.broken >= n,
   }));
-  [[5, 30000], [15, 5e6]].forEach(([n, c], k) => UPGRADES.push({
+  [[5, 30000], [15, 5e6], [25, 5e8]].forEach(([n, c], k) => UPGRADES.push({
     id: 'critx' + k, ico: '💥', group: 'critx',
     name: '会心の極意 ' + ROMAN[k], desc: '会心の倍率 +5倍',
     cost: c, need: `急所ねらいを${n}個`, req: () => lv('crit') >= n,
@@ -615,6 +629,24 @@
     id: 'syn' + k, ico: '🐾', group: 'syn',
     name: '猫の手も借りる ' + ROMAN[k], desc: '1打に毎秒ダメージの3%を上乗せ',
     cost: c, need: `毎秒ダメージ ${n.toLocaleString('ja-JP')}`, req: () => autoPower() >= n,
+  }));
+  // キーボードを壊しきった台数で解放。クリックにも自動破壊にも効く
+  [[1, 2e5], [2, 2e7], [4, 5e9], [6, 1e12]].forEach(([n, c], k) => UPGRADES.push({
+    id: 'kbx' + k, ico: '🧨', group: 'kbx',
+    name: '解体の心得 ' + ROMAN[k], desc: 'すべてのダメージ 1.5倍',
+    cost: c, need: `キーボードを${n}台破壊`, req: () => kbCount() >= n,
+  }));
+  // 実績の数に応じて強くなる(持っている実績が多いほど効く)
+  [[5, 2e4], [10, 2e6], [15, 2e8], [20, 2e10]].forEach(([n, c], k) => UPGRADES.push({
+    id: 'achx' + k, ico: '🏅', group: 'achx',
+    name: '職人の誇り ' + ROMAN[k], desc: '実績1個につき、すべてのダメージ +1%',
+    cost: c, need: `実績を${n}個`, req: () => achOwned >= n,
+  }));
+  // 連打ボーナス: 間をあけずに叩き続けると、1打ごとに威力が上がる
+  [[500, 5000, 50], [5000, 1e6, 100], [20000, 1e8, 200]].forEach(([n, c, cap], k) => UPGRADES.push({
+    id: 'combo' + k, ico: '🥁', group: 'combo', cap,
+    name: '連打の呼吸 ' + ROMAN[k], desc: `連打すると1打ごとに威力 +1%(最大 +${cap}%)`,
+    cost: c, need: `${n.toLocaleString('ja-JP')}回叩く`, req: () => S.clicks >= n,
   }));
 
   const upCount = () => UPGRADES.filter(u => S.ups[u.id]).length;
@@ -642,13 +674,15 @@
     { id: 'dps1000', ico: '🛋️', name: 'ほったらかし名人', desc: '毎秒ダメージ1,000', ok: () => autoPower() >= 1000 },
     { id: 'up1', ico: '📜', name: '道具は使いよう', desc: '強化を1つ習得する', ok: () => upCount() >= 1 },
     { id: 'up10', ico: '🥋', name: '免許皆伝', desc: '強化を10個習得する', ok: () => upCount() >= 10 },
+    { id: 'up30', ico: '🐉', name: '奥義', desc: '強化を30個習得する', ok: () => upCount() >= 30 },
+    { id: 'combo50', ico: '🥁', name: '乱れ打ち', desc: '連打ボーナスを +50% まで伸ばす', ok: () => S.maxCombo >= 50 },
   ];
   const SAVE_KEY = 'keyswitch-crusher-v2';
 
   // ---------- 状態 ----------
   const fresh = () => ({
     scrap: 0, total: 0, broken: 0, level: 1, hp: 0,
-    clicks: 0, crits: 0, keys: 0, fast: false,
+    clicks: 0, crits: 0, keys: 0, fast: false, maxCombo: 0,
     owned: {}, ups: {}, ach: {}, sw: 'blue', buy: 1, sound: true,
   });
   let S = fresh();
@@ -686,16 +720,20 @@
   function recalc() {
     const n = g => UPGRADES.filter(u => u.group === g && S.ups[u.id]).length;
     M = { tool: {}, gclick: Math.pow(2, n('gclick')), gauto: Math.pow(2, n('gauto')),
-          critMult: 5 + 5 * n('critx'), syn: 0.03 * n('syn') };
+          critMult: 5 + 5 * n('critx'), syn: 0.03 * n('syn'),
+          kb: Math.pow(1.5, n('kbx')), achPct: 0.01 * n('achx'),
+          comboCap: Math.max(0, ...UPGRADES.filter(u => u.group === 'combo' && S.ups[u.id]).map(u => u.cap)) };
     for (const it of ITEMS) {
       M.tool[it.id] = Math.pow(2, UPGRADES.filter(u => u.tool === it.id && S.ups[u.id]).length);
     }
   }
   recalc();
+  let achOwned = ACH.filter(a => S.ach[a.id]).length; // 持っている実績の数。renderAch で更新する
+  const allMult = () => M.kb * (1 + achOwned * M.achPct); // クリックにも自動破壊にも掛かる倍率
   const sumOf = kind => ITEMS.filter(i => i.kind === kind)
     .reduce((a, i) => a + i.val * lv(i.id) * M.tool[i.id], 0);
-  const autoPower = () => sumOf('auto') * M.gauto;
-  const clickPower = () => (1 + sumOf('click')) * M.gclick + autoPower() * M.syn;
+  const autoPower = () => sumOf('auto') * M.gauto * allMult();
+  const clickPower = () => (1 + sumOf('click')) * M.gclick * allMult() + autoPower() * M.syn;
   const critChance = () => (5 + sumOf('crit')) / 100;
 
   const maxHp = level => Math.floor(1000 * Math.pow(1.06, level - 1));
@@ -1034,12 +1072,26 @@
 
   let upTimer = 0;
   let hitTimes = [];
+  const COMBO_MS = 600; // これより間があくと連打ボーナスは切れる
+  let comboN = 0, lastHitT = 0;
+  function showCombo(c) {
+    $('comboBox').hidden = !c;
+    setText($('combo'), '+' + c + '%');
+  }
   function hit(x, y) {
     const crit = Math.random() < critChance();
-    const dmg = clickPower() * (crit ? M.critMult : 1);
+    const t = performance.now();
+    let combo = 0;
+    if (M.comboCap) {
+      comboN = t - lastHitT < COMBO_MS ? comboN + 1 : 0;
+      combo = Math.min(comboN, M.comboCap);
+      if (combo > S.maxCombo) S.maxCombo = combo;
+      showCombo(combo);
+    }
+    lastHitT = t;
+    const dmg = clickPower() * (crit ? M.critMult : 1) * (1 + combo / 100);
     S.clicks++;
     if (crit) S.crits++;
-    const t = performance.now();
     hitTimes.push(t);
     while (t - hitTimes[0] > 1000) hitTimes.shift();
     if (hitTimes.length >= 10) S.fast = true;
@@ -1066,8 +1118,8 @@
   let upsBox, upsNote, upsKey = null, upEls = [];
   function descOf(it) {
     const m = M.tool[it.id];
-    return it.kind === 'click' ? `1打 +${fmt(it.val * m * M.gclick)}`
-      : it.kind === 'auto' ? `毎秒 +${fmt(it.val * m * M.gauto)}`
+    return it.kind === 'click' ? `1打 +${fmt(it.val * m * M.gclick * allMult())}`
+      : it.kind === 'auto' ? `毎秒 +${fmt(it.val * m * M.gauto * allMult())}`
       : `会心率 +${it.val}%(会心は${M.critMult}倍)`;
   }
   const ITEM_HTML = ico => `<span class="ico" aria-hidden="true">${ico}</span>
@@ -1097,9 +1149,15 @@
       }
       if (kind === 'crit') {
         upsBox = document.createElement('div');
-        upsNote = document.createElement('div');
-        upsNote.className = 'ups-note';
-        el.shop.append(upsBox, upsNote);
+        const row = document.createElement('div');
+        row.className = 'ups-note';
+        upsNote = document.createElement('span');
+        const all = document.createElement('button');
+        all.type = 'button';
+        all.textContent = '強化一覧';
+        all.addEventListener('click', () => { renderUpList(); $('dlgUps').showModal(); });
+        row.append(upsNote, all);
+        el.shop.append(upsBox, row);
       }
     }
   }
@@ -1122,6 +1180,33 @@
     S.ups[u.id] = 1;
     recalc();
     bought();
+  }
+
+  // すべての強化を、習得済み・購入できる・条件未達に分けて見せる一覧
+  function renderUpList() {
+    const box = $('upsList');
+    box.textContent = '';
+    const groups = [['全体の強化', u => !u.tool]]
+      .concat(ITEMS.filter(i => i.kind !== 'crit').map(i => [i.name, u => u.tool === i.id]));
+    for (const [title, pick] of groups) {
+      const h = document.createElement('h2');
+      h.textContent = title;
+      const g = document.createElement('div');
+      g.className = 'ach-grid';
+      for (const u of UPGRADES.filter(pick)) {
+        const have = !!S.ups[u.id];
+        const d = document.createElement('div');
+        d.className = 'badge' + (have ? ' on' : '');
+        d.innerHTML = `<span class="ico" aria-hidden="true">${u.ico}</span><span><div class="nm"></div><div class="ds"></div><div class="ds"></div></span>`;
+        const [nm, ds, stt] = d.querySelectorAll('.nm, .ds');
+        nm.textContent = u.name;
+        ds.textContent = u.desc;
+        stt.textContent = have ? '✔ 習得済み' : u.req() ? '値段 ' + fmt(u.cost) : '🔒 ' + u.need;
+        g.appendChild(d);
+      }
+      box.append(h, g);
+    }
+    $('upsTitle').textContent = `強化一覧 ${upCount()} / ${UPGRADES.length}`;
   }
 
   // 買える強化すべてと、まだ条件を満たしていない強化を安い順に3つまで見せる
@@ -1192,6 +1277,7 @@
       if (on) n++;
       achEls[a.id].classList.toggle('on', on);
     }
+    achOwned = n;
     $('achTitle').textContent = `実績 ${n} / ${ACH.length}`;
     $('achN').textContent = `${n}/${ACH.length}`;
     renderAxes();
@@ -1259,9 +1345,9 @@
   el.sw.addEventListener('contextmenu', e => e.preventDefault());
 
   // 軸コレクションと実績は、上のボタンから開く小窓に入っている
-  for (const [btn, dlg] of [['btnAxis', 'dlgAxis'], ['btnAch', 'dlgAch']]) {
+  for (const [btn, dlg] of [['btnAxis', 'dlgAxis'], ['btnAch', 'dlgAch'], [null, 'dlgUps']]) {
     const d = $(dlg);
-    $(btn).addEventListener('click', () => d.showModal());
+    if (btn) $(btn).addEventListener('click', () => d.showModal());
     d.addEventListener('click', e => {
       if (e.target === d || e.target.closest('[data-close]')) d.close(); // 外側か「閉じる」で閉じる
     });
@@ -1312,6 +1398,8 @@
     S.hp = maxHp(1);
     parts = [];
     hitTimes = [];
+    comboN = 0;
+    showCombo(0);
     recalc();
     renderAch();
     dressSwitch(true);
@@ -1332,6 +1420,7 @@
       drawHp();
     }
     drawParts(Math.min(dt, 0.05));
+    if (comboN && now - lastHitT > COMBO_MS) { comboN = 0; showCombo(0); }
     acc += dt;
     if (dirty || acc > 0.25) { render(); checkAch(); acc = 0; }
     requestAnimationFrame(frame);
