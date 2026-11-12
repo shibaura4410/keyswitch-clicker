@@ -607,7 +607,7 @@
     <h2 id="psTitle">周回</h2>
     <button class="dlg-close" type="button" data-close>閉じる</button>
   </div>
-  <p class="ps-text">周回すると、スクラップ・工具・自動破壊・強化・キーボードの進み具合を手放して、最初の「A」からやり直します。代わりに毎回<b>設計図</b>を 3 枚受け取り、すべてのダメージが永久に +15% されます(1 枚につき +5%、周回のたびに積み上がります)。実績・軸・統計・設計図は残ります。</p>
+  <p class="ps-text">周回すると、スクラップ・工具・自動破壊・強化・キーボードの進み具合を手放して、最初の「A」からやり直します。代わりに毎回<b>設計図</b>を 3 枚受け取り、すべてのダメージが永久に +15% されます(1 枚につき +5%、周回のたびに積み上がります)。実績・軸・統計・設計図は残ります。<br>周回できるのは、キーボードを 1 台壊しきり、さらにキー 1 個を壊すのに 1 分以上かかるほど行き詰まってからです(毎秒 3 回叩いた場合の見込み)。</p>
   <table class="stats" id="psBody"></table>
   <button class="ps-go" id="psGo" type="button">周回する</button>
 </dialog>
@@ -717,6 +717,10 @@
     name: '連打の呼吸 ' + ROMAN[k], desc: `連打すると1打ごとに威力 +1%(最大 +${cap}%)`,
     cost: c, need: `${n.toLocaleString('ja-JP')}回叩く`, req: () => S.clicks >= n,
   }));
+
+  // 難易度: キーの耐久と、工具・自動破壊・強化の値段にまとめて掛ける倍率
+  const DIFF = 5;
+  for (const u of UPGRADES) u.cost *= DIFF;
 
   const upCount = () => UPGRADES.filter(u => S.ups[u.id]).length;
   const ACH = [
@@ -856,7 +860,7 @@
   if (!S.prestiges && !S.runTotal) S.runTotal = S.total;
   // 軸は累計で壊しきった台数で手に入る(周回しても失わない)
   const curType = () => SWITCH_TYPES.find(t => t.id === S.sw && S.kbAll >= t.need) || SWITCH_TYPES[0];
-  const costAt = (it, level) => Math.floor(it.base * Math.pow(it.growth || 1.15, level));
+  const costAt = (it, level) => Math.floor(it.base * DIFF * Math.pow(it.growth || 1.15, level));
   // いまの「まとめ買い」設定で買う個数 n と合計額。S.buy は 1・10・100、または 'max'(全財産で買えるだけ)
   function bundle(it) {
     const have = lv(it.id);
@@ -900,7 +904,7 @@
   const clickPower = () => (1 + sumOf('click')) * M.gclick * allMult() + autoPower() * M.syn;
   const critChance = () => (5 + sumOf('crit')) / 100;
 
-  const maxHp = level => Math.floor(1000 * Math.pow(1.06, level - 1));
+  const maxHp = level => Math.floor(1000 * DIFF * Math.pow(1.06, level - 1));
 
   const UNITS = ['', '万', '億', '兆', '京', '垓', '𥝱', '穣'];
   function fmt(n) {
@@ -1612,21 +1616,31 @@
   }
 
   // ---------- 周回 ----------
-  const canPrestige = () => kbCount() >= 1;
+  // 周回できるのは行き詰まってから: キーボードを1台壊しきったうえで、
+  // いまのキー1個を壊すのに STUCK_SEC 秒以上かかる見込みになったとき
+  const STUCK_SEC = 60, ASSUMED_CPS = 3; // 見込みは「毎秒3回叩く」前提。フィーバーの上乗せは除く
+  const keyTime = () => maxHp(S.level) / ((autoPower() + clickPower() * ASSUMED_CPS) / (fever ? fever.all : 1));
+  const canPrestige = () => kbCount() >= 1 && keyTime() >= STUCK_SEC;
+  let stuckTold = false; // 「周回できます」の知らせは1回の周回につき1度だけ
   function renderPs() {
     const g = bpGain();
     fillTable('psBody', [
       ['持っている設計図', `${fmt(S.bp)} 枚(${pct(S.bp * BP_BONUS)})`],
       ['周回 1 回でもらえる設計図', `${fmt(g)} 枚(${pct(g * BP_BONUS)})`],
       ['周回後のダメージ', pct((S.bp + g) * BP_BONUS)],
+      ['条件'],
+      ['キーボードを 1 台壊しきる', kbCount() >= 1 ? '✔ 達成' : `あと ${ORDER.length - (S.level - 1)} キー`],
+      [`キー 1 個に ${STUCK_SEC} 秒以上かかる`, (keyTime() >= STUCK_SEC ? '✔ ' : '') + 'いま約 ' + fmtTime(keyTime())],
     ]);
     $('psGo').disabled = !canPrestige();
-    $('psGo').textContent = kbCount() < 1 ? 'キーボードを 1 台壊しきると周回できます'
+    $('psGo').textContent = kbCount() < 1 ? 'キーボードを 1 台壊しきるまで周回できません'
+      : keyTime() < STUCK_SEC ? 'まだ先へ進めます(行き詰まると周回できます)'
       : `周回する(設計図 +${fmt(g)}、ダメージ ${pct(g * BP_BONUS)})`;
   }
   function resetRun() {
     S.scrap = 0; S.owned = {}; S.ups = {}; S.level = 1; S.broken = 0; S.runTotal = 0;
     S.hp = maxHp(1);
+    stuckTold = false;
     fever = null;
     parts = [];
     hitTimes = [];
@@ -1747,7 +1761,9 @@
     if (dirty || acc > 0.25) {
       render();
       drawFever();
-      setText($('psN'), canPrestige() ? '+' + fmt(bpGain()) : '');
+      const canPs = canPrestige();
+      setText($('psN'), canPs ? '+' + fmt(bpGain()) : '');
+      if (canPs && !stuckTold) { stuckTold = true; toast('♻️ 進みが遅くなってきました。周回できます'); }
       if ($('dlgStats').open) renderStats();
       if ($('dlgPs').open) renderPs();
       checkAch();
