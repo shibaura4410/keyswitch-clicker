@@ -988,14 +988,14 @@
       } catch (e) { /* 読めなければ合成音のまま */ }
     }
   }
-  function playSample(buf) {
+  function playSample(buf, vol) {
     const a = audio();
     if (!a) return;
     const src = a.createBufferSource();
     src.buffer = buf;
     src.playbackRate.value = 0.97 + Math.random() * 0.06; // 1打ごとにわずかに揺らす
     const g = a.createGain();
-    g.gain.value = SAMPLE_GAIN * (0.85 + Math.random() * 0.3);
+    g.gain.value = SAMPLE_GAIN * vol * (0.85 + Math.random() * 0.3);
     src.connect(g).connect(a.destination);
     src.start();
   }
@@ -1030,14 +1030,15 @@
     src.start(a.currentTime + when);
   }
   let lastSnd = 0;
-  function sndHit() {
+  // vol: 手で叩いたときは 1、自動破壊のときは小さめ
+  function sndHit(vol = 1) {
     const now = performance.now();
     if (now - lastSnd < 25) return;
     lastSnd = now;
     const type = curType();
-    if (sampleBufs[type.id]) { playSample(sampleBufs[type.id]); return; }
+    if (sampleBufs[type.id]) { playSample(sampleBufs[type.id], vol); return; }
     const s = type.snd;
-    const v = 0.85 + Math.random() * 0.3;
+    const v = vol * (0.85 + Math.random() * 0.3);
     const p = 1;
     const up = s.gap || 0.08;
     if (s.tick) strike(s.tick, 0, v, p);
@@ -1730,6 +1731,10 @@
     resetRun();
   });
 
+  const AUTO_VOL = 0.4;
+  let autoSndWait = 0, gestured = false;
+  document.addEventListener('pointerdown', () => { gestured = true; }, { once: true, capture: true });
+
   // ---------- ループ ----------
   let last = performance.now();
   let acc = 0;
@@ -1740,6 +1745,14 @@
     if (dps > 0) {
       damage(dps * dt);
       drawHp();
+      // 自動破壊の音: 選んでいる軸の打鍵音を小さめに鳴らす。毎秒ダメージが大きいほど速く(毎秒2〜8回)。
+      // ブラウザは操作の前に音を鳴らせないので、一度どこかを押してから鳴らし始める
+      autoSndWait -= Math.min(dt, 1);
+      if (autoSndWait <= 0) {
+        if (gestured && !document.hidden) sndHit(AUTO_VOL);
+        const rate = Math.max(2, Math.min(8, 1 + Math.log10(dps)));
+        autoSndWait = (0.7 + Math.random() * 0.6) / rate;
+      }
     }
     drawParts(Math.min(dt, 0.05));
     if (comboN && now - lastHitT > COMBO_MS) { comboN = 0; showCombo(0); }
