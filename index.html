@@ -463,13 +463,15 @@
           <path id="spring" d="M106 196 L134 199 L106 202 L134 205 L106 208 L134 211 L106 214 L134 217 L106 220 L134 223 L106 226" fill="none" stroke="#e2d9b6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" opacity=".85"/>
           <!-- 軸(押すとキーキャップと一緒に下がる) -->
           <g class="mv">
+            <!-- 重ね順: 奥に細い柱、その手前に幅広の台。柱が台の上に透けて見えないようにする -->
             <g id="stem" fill="#3d7be0">
-              <rect x="101" y="150" width="38" height="52" rx="3"/>
+              <rect x="101" y="150" width="38" height="40" rx="3"/>
+              <rect x="101" y="150" width="38" height="40" rx="3" fill="url(#gRound)"/>
+              <rect x="101" y="176" width="38" height="8" fill="#000" opacity=".35"/>
               <rect x="90" y="184" width="60" height="20" rx="3"/>
+              <rect x="90" y="184" width="60" height="20" rx="3" fill="url(#gRound)"/>
+              <rect x="90" y="184" width="60" height="2.5" rx="1.2" fill="#fff" opacity=".35"/>
             </g>
-            <rect x="101" y="150" width="38" height="52" rx="3" fill="url(#gRound)"/>
-            <rect x="90" y="184" width="60" height="20" rx="3" fill="url(#gRound)"/>
-            <rect x="101" y="176" width="38" height="8" fill="#000" opacity=".35"/>
           </g>
           <!-- 上ハウジング: 透明 -->
           <path d="M70 188 H170 L188 222 H52 Z" fill="#eaf6ff" opacity=".2"/>
