@@ -1512,7 +1512,8 @@
 
   // ---------- 金のキーとフィーバー ----------
   const rand = (a, b) => a + Math.random() * (b - a);
-  let goldWait = rand(40, 90); // 次に現れるまでの秒
+  const GOLD_FIRST = [120, 240], GOLD_EVERY = [180, 420]; // 現れるまでの秒: 開いた直後と、2回目以降
+  let goldWait = rand(...GOLD_FIRST); // 次に現れるまでの秒
   let goldEl = null, goldTimers = [];
   function clearGold() {
     goldTimers.forEach(clearTimeout);
@@ -1740,7 +1741,7 @@
     S.playSec += live;
     if (fever && now > fever.until) { fever = null; dirty = true; }
     goldWait -= live;
-    if (goldWait <= 0) { spawnGold(); goldWait = rand(60, 150); }
+    if (goldWait <= 0) { spawnGold(); goldWait = rand(...GOLD_EVERY); }
     acc += dt;
     if (dirty || acc > 0.25) {
       render();
