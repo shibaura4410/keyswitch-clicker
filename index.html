@@ -459,6 +459,8 @@
           <rect x="110" y="244" width="20" height="13" rx="5" fill="#c3d6c5"/>
           <rect x="86" y="244" width="5" height="19" rx="1.5" fill="url(#gPin)"/>
           <rect x="147" y="244" width="5" height="15" rx="1.5" fill="url(#gPin)"/>
+          <!-- ばね(透明な上ハウジング越しに見える)。軸より後ろに描くので、上端は軸に、下端は下ハウジングに隠れる -->
+          <path id="spring" d="M106 196 L134 199 L106 202 L134 205 L106 208 L134 211 L106 214 L134 217 L106 220 L134 223 L106 226" fill="none" stroke="#e2d9b6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" opacity=".85"/>
           <!-- 軸(押すとキーキャップと一緒に下がる) -->
           <g class="mv">
             <g id="stem" fill="#3d7be0">
@@ -469,8 +471,6 @@
             <rect x="90" y="184" width="60" height="20" rx="3" fill="url(#gRound)"/>
             <rect x="101" y="176" width="38" height="8" fill="#000" opacity=".35"/>
           </g>
-          <!-- ばね(透明な上ハウジング越しに見える)。上端は軸の中、下端は下ハウジングの中に隠れる -->
-          <path id="spring" d="M106 196 L134 199 L106 202 L134 205 L106 208 L134 211 L106 214 L134 217 L106 220 L134 223 L106 226" fill="none" stroke="#e2d9b6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" opacity=".85"/>
           <!-- 上ハウジング: 透明 -->
           <path d="M70 188 H170 L188 222 H52 Z" fill="#eaf6ff" opacity=".2"/>
           <path d="M74 191 H97 L86 220 H59 Z" fill="#fff" opacity=".16"/>
