@@ -17,3 +17,12 @@
 ## 使い方
 
 `index.html` をブラウザで開くだけで動きます。外部のライブラリや通信は使わず、このフォルダだけで完結しています。
+
+## 音源
+
+青軸・茶軸・赤軸・黒軸・銀軸の打鍵音は録音で、[The Listening Museum(sheets.works)](https://sheets.works/data-viz/keyboard-sounds)の音源集から取得しました。同ページによる出どころは次のとおりです。
+
+- 青軸・茶軸・赤軸・黒軸: [Mechvibes](https://mechvibes.com) の同梱パック「CherryMX Blue / Brown / Red / Black - PBT keycaps」
+- 銀軸: [keyboardsounds](https://github.com/nathan-fiscaletti/keyboardsounds)(GPL-3.0)の Cherry MX Speed Silver
+
+そのほかの軸(桃・緑・紫・金・白)は、ブラウザ上で合成した音です。
