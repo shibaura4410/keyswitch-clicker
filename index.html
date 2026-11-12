@@ -74,6 +74,7 @@
     -webkit-user-select: none;
     touch-action: manipulation;
   }
+  .stage, header h1 { cursor: pointer; }
   .scrap { text-align: center; }
   .scrap .num {
     font-size: 40px;
@@ -565,7 +566,7 @@
         </svg>
       </button>
     </div>
-    <div class="hint">クリック・タップで破壊！与えたダメージがそのままスクラップになります</div>
+    <div class="hint">画面のどこでもクリック・タップで破壊！与えたダメージがそのままスクラップになります</div>
   </section>
 
   <aside class="shop" id="shop" aria-label="ショップ">
@@ -1674,10 +1675,15 @@
   }
 
   // ---------- 入力 ----------
-  el.sw.addEventListener('pointerdown', e => {
+  // 画面のどこを押しても叩ける。ショップ・上のボタン・小窓・金のキーは、それぞれの操作を優先する
+  document.addEventListener('pointerdown', e => {
     if (e.button > 0) return;
+    if (e.target.closest('.shop, .util, dialog, .gold')) return;
     const a = el.arena.getBoundingClientRect();
-    hit(e.clientX - a.left, e.clientY - a.top);
+    const x = e.clientX - a.left, y = e.clientY - a.top;
+    // スイッチのまわり(破片を描ける範囲)ならその位置に、外なら スイッチの上に数字と破片を出す
+    if (x >= 0 && y >= 0 && x <= a.width && y <= a.height) hit(x, y);
+    else hit(null, null);
   });
   el.sw.addEventListener('contextmenu', e => e.preventDefault());
 
