@@ -608,7 +608,7 @@
     <h2 id="psTitle">周回</h2>
     <button class="dlg-close" type="button" data-close>閉じる</button>
   </div>
-  <p class="ps-text">周回すると、スクラップ・工具・自動破壊・強化・キーボードの進み具合を手放して、最初の「A」からやり直します。代わりに毎回<b>設計図</b>を 3 枚受け取り、すべてのダメージが永久に +15% されます(1 枚につき +5%、周回のたびに積み上がります)。実績・軸・統計・設計図は残ります。<br>周回するには、その周回のなかでキーボードを決まった台数まで壊しきる必要があります。1 回目は 2 台で、周回するたびに 2 台ずつ増えます。</p>
+  <p class="ps-text">周回すると、スクラップ・工具・自動破壊・強化・キーボードの進み具合を手放して、最初の「A」からやり直します。代わりに<b>設計図</b>を受け取り、1 枚につきすべてのダメージが永久に +5% されます。実績・軸・統計・設計図は残ります。<br>周回するには、その周回のなかでキーボードを決まった台数まで壊しきる必要があります。1 回目は 8 台で、周回するたびに 5 台ずつ増えます。条件ぴったりで設計図 3 枚(+15%)、条件を超えて壊しきった 1 台ごとに、さらに 1 枚(+5%)もらえます。</p>
   <table class="stats" id="psBody"></table>
   <button class="ps-go" id="psGo" type="button">周回する</button>
 </dialog>
@@ -902,8 +902,13 @@
   recalc();
   let achOwned = ACH.filter(a => S.ach[a.id]).length; // 持っている実績の数。renderAch で更新する
   // 周回: 1回ごとに決まった枚数の設計図がもらえる。1枚につき全ダメージ +5%
-  const BP_PER_RUN = 3, BP_BONUS = 0.05; // 周回1回で設計図3枚 = 全ダメージ +15%
-  const bpGain = () => BP_PER_RUN;
+  // 周回の条件: この周回で壊しきったキーボードの台数。1回目は8台、以降は周回するたびに5台ずつ増える
+  const PS_MIN = 8, PS_STEP = 5;
+  const psNeed = () => PS_MIN + PS_STEP * S.prestiges;
+  const psOver = () => Math.max(0, kbCount() - psNeed()); // 条件を超えて壊しきった台数
+  // 報酬: 条件ぴったりで設計図3枚(全ダメージ +15%)。超えた1台ごとに、さらに1枚(+5%)
+  const BP_PER_RUN = 3, BP_PER_OVER = 1, BP_BONUS = 0.05;
+  const bpGain = () => BP_PER_RUN + psOver() * BP_PER_OVER;
   // フィーバー: 金のキーを押すと一定時間かかる。{ name, all, click, until }
   let fever = null;
   const allMult = () => M.kb * (1 + achOwned * M.achPct) * (1 + S.bp * BP_BONUS) * (fever ? fever.all : 1); // クリックにも自動破壊にも掛かる倍率
@@ -1681,16 +1686,14 @@
   }
 
   // ---------- 周回 ----------
-  // 周回の条件: この周回で壊しきったキーボードの台数。1回目は2台、以降は周回するたびに2台ずつ増える
-  const PS_STEP = 2;
-  const psNeed = () => PS_STEP * (S.prestiges + 1);
   const canPrestige = () => kbCount() >= psNeed();
   let psTold = false; // 「周回できます」の知らせは1回の周回につき1度だけ
   function renderPs() {
     const g = bpGain();
     fillTable('psBody', [
       ['持っている設計図', `${fmt(S.bp)} 枚(${pct(S.bp * BP_BONUS)})`],
-      ['周回 1 回でもらえる設計図', `${fmt(g)} 枚(${pct(g * BP_BONUS)})`],
+      ['いま周回するともらえる設計図', `${fmt(g)} 枚(${pct(g * BP_BONUS)})`],
+      ['うち、条件を超えたぶん', `${psOver()} 台 → +${fmt(psOver() * BP_PER_OVER)} 枚`],
       ['周回後のダメージ', pct((S.bp + g) * BP_BONUS)],
       ['条件'],
       [`この周回でキーボードを ${psNeed()} 台壊しきる`, kbCount() >= psNeed() ? '✔ 達成' : `いま ${kbCount()} 台`],
