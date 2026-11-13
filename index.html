@@ -329,6 +329,13 @@
   }
   .ps-go:disabled { opacity: .45; cursor: not-allowed; }
   #psN:not(:empty) { color: var(--accent); font-weight: 800; }
+  /* 音の設定 */
+  .snd-on { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; margin: 4px 0 12px; cursor: pointer; }
+  .snd-on input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .snd-row { display: grid; grid-template-columns: 7.5em 1fr 3.2em; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .snd-row input { width: 100%; accent-color: var(--accent); }
+  .snd-row output { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  #dlgSnd.off .snd-row { opacity: .45; }
   .axis-note { font-size: 11px; color: var(--muted); margin: 0 4px 8px; }
   .axes { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 6px; }
   .axis {
@@ -451,7 +458,7 @@
       <button id="btnAch" type="button">🏆 実績 <span id="achN"></span></button>
       <button id="btnStats" type="button">📊 統計</button>
       <button id="btnPs" type="button">♻️ 周回 <span id="psN"></span></button>
-      <button id="btnSound" type="button" aria-pressed="true">🔊 音</button>
+      <button id="btnSound" type="button">🔊 音</button>
       <button id="btnReset" type="button">最初から</button>
     </div>
   </header>
@@ -595,6 +602,18 @@
     <button class="dlg-close" type="button" data-close>閉じる</button>
   </div>
   <div id="upsList"></div>
+</dialog>
+<dialog class="dlg" id="dlgSnd" aria-labelledby="sndTitle" style="width: min(420px, calc(100vw - 24px))">
+  <div class="dlg-head">
+    <h2 id="sndTitle">音の設定</h2>
+    <button class="dlg-close" type="button" data-close>閉じる</button>
+  </div>
+  <label class="snd-on"><input type="checkbox" id="sndOn"> 音を鳴らす</label>
+  <div class="snd-row"><label for="volMaster">全体</label><input type="range" id="volMaster" data-k="master" min="0" max="100" step="5"><output></output></div>
+  <div class="snd-row"><label for="volHit">叩く音</label><input type="range" id="volHit" data-k="hit" min="0" max="100" step="5"><output></output></div>
+  <div class="snd-row"><label for="volAuto">自動破壊の音</label><input type="range" id="volAuto" data-k="auto" min="0" max="100" step="5"><output></output></div>
+  <div class="snd-row"><label for="volBrk">壊れる音</label><input type="range" id="volBrk" data-k="brk" min="0" max="100" step="5"><output></output></div>
+  <div class="axis-note" style="margin-top: 10px">スライダーを動かして離すと、その音を試しに鳴らします。設定は保存されます。</div>
 </dialog>
 <dialog class="dlg" id="dlgStats" aria-labelledby="statsTitle" style="width: min(460px, calc(100vw - 24px))">
   <div class="dlg-head">
@@ -846,6 +865,7 @@
     // 周回しても残るもの: 設計図、周回数、累計の破壊数・台数、記録
     bp: 0, prestiges: 0, kbAll: 0, brokenAll: 0, runTotal: 0, maxHit: 0, gold: 0, playSec: 0,
     owned: {}, ups: {}, ach: {}, sw: 'blue', buy: 1, sound: true,
+    vol: { master: 100, hit: 100, auto: 100, brk: 100 }, // 音量(0〜100): 全体、叩く音、自動破壊の音、壊れる音
   });
   let S = fresh();
   // 周回などを入れる前の保存データを、一度だけ別の名前で残しておく(戻したいとき用)
@@ -857,6 +877,13 @@
     const raw = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
     if (raw && typeof raw === 'object') S = Object.assign(fresh(), raw);
   } catch (e) { /* 保存が読めなくても遊べる */ }
+  // 音量の設定が欠けていたり範囲外だったりしたら、標準の値で埋める
+  {
+    const d = fresh().vol, v = (S.vol && typeof S.vol === 'object') ? S.vol : {};
+    S.vol = {};
+    for (const k of Object.keys(d)) S.vol[k] = Number.isFinite(+v[k]) && v[k] !== null ? Math.max(0, Math.min(100, +v[k])) : d[k];
+  }
+  const volOf = k => (S.vol.master / 100) * (S.vol[k] / 100); // 全体の音量を掛けた、種類ごとの音量(0〜1)
   const save = () => {
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* 同上 */ }
   };
@@ -1103,6 +1130,7 @@
   let lastSnd = 0;
   // vol: 手で叩いたときは 1、自動破壊のときは小さめ
   function sndHit(vol = 1) {
+    if (vol <= 0) return;
     const now = performance.now();
     if (now - lastSnd < 25) return;
     lastSnd = now;
@@ -1119,8 +1147,10 @@
     strike(s.up, up, v * 0.7, p);
   }
   function sndBreak(big) {
-    noise(big ? 0.5 : 0.22, big ? 500 : 900, 0.6);
-    noise(0.12, 3200, 0.25);
+    const v = volOf('brk');
+    if (v <= 0) return;
+    noise(big ? 0.5 : 0.22, big ? 500 : 900, 0.6 * v);
+    noise(0.12, 3200, 0.25 * v);
   }
 
   // ---------- パーティクル ----------
@@ -1343,7 +1373,7 @@
     }
     floatText((crit ? '会心 ' : '') + fmt(dmg), x, y - 20, crit ? 'crit' : '');
     burst(x, y, crit ? 10 : 4, capColors, crit ? 300 : 200, ['chip']);
-    sndHit();
+    sndHit(volOf('hit'));
     el.sw.classList.add('down');
     el.sw.classList.remove('shake');
     void el.sw.offsetWidth;
@@ -1552,7 +1582,7 @@
         dressSwitch(true);
         renderAxes();
         lastSnd = 0;
-        sndHit(); // 選んだ軸の音を試し聞き
+        sndHit(volOf('hit')); // 選んだ軸の音を試し聞き
         save();
         if (e.detail > 0) b.blur();
       });
@@ -1757,7 +1787,7 @@
 
   // 軸コレクションと実績は、上のボタンから開く小窓に入っている
   for (const [btn, dlg, onOpen] of [['btnAxis', 'dlgAxis'], ['btnAch', 'dlgAch'], [null, 'dlgUps'],
-    ['btnStats', 'dlgStats', renderStats], ['btnPs', 'dlgPs', renderPs]]) {
+    ['btnStats', 'dlgStats', renderStats], ['btnPs', 'dlgPs', renderPs], ['btnSound', 'dlgSnd', renderSnd]]) {
     const d = $(dlg);
     if (btn) $(btn).addEventListener('click', () => { if (onOpen) onOpen(); d.showModal(); });
     d.addEventListener('click', e => {
@@ -1781,19 +1811,40 @@
   });
 
   function drawSoundBtn() {
-    el.btnSound.textContent = S.sound ? '🔊 音' : '🔇 音';
-    el.btnSound.setAttribute('aria-pressed', String(S.sound));
+    const on = S.sound && S.vol.master > 0;
+    el.btnSound.textContent = on ? '🔊 音' : '🔇 音';
   }
-  el.btnSound.addEventListener('click', () => {
-    S.sound = !S.sound;
+  function renderSnd() {
+    $('sndOn').checked = S.sound;
+    $('dlgSnd').classList.toggle('off', !S.sound);
+    for (const r of $('dlgSnd').querySelectorAll('input[data-k]')) {
+      r.value = S.vol[r.dataset.k];
+      r.nextElementSibling.textContent = S.vol[r.dataset.k] + '%';
+    }
     drawSoundBtn();
+  }
+  $('sndOn').addEventListener('change', e => {
+    S.sound = e.target.checked;
+    renderSnd();
     save();
   });
+  for (const r of $('dlgSnd').querySelectorAll('input[data-k]')) {
+    r.addEventListener('input', () => { S.vol[r.dataset.k] = +r.value; renderSnd(); });
+    r.addEventListener('change', () => { // 離したところで試し聞き
+      const k = r.dataset.k;
+      lastSnd = 0;
+      if (k === 'brk') sndBreak(false);
+      else if (k === 'auto') sndHit(AUTO_VOL * volOf('auto'));
+      else sndHit(volOf('hit'));
+      save();
+    });
+  }
   el.btnReset.addEventListener('click', () => {
     if (!confirm('スクラップ・工具・実績・軸・設計図をすべて消して、最初からやり直しますか？(周回とは違い、何も残りません)')) return;
-    const sound = S.sound;
+    const sound = S.sound, vol = S.vol; // 音の設定は消さない
     S = fresh();
     S.sound = sound;
+    S.vol = vol;
     drawBuyMode();
     resetRun();
   });
@@ -1816,7 +1867,7 @@
       // ブラウザは操作の前に音を鳴らせないので、一度どこかを押してから鳴らし始める
       autoSndWait -= Math.min(dt, 1);
       if (autoSndWait <= 0) {
-        if (gestured && !document.hidden) sndHit(AUTO_VOL);
+        if (gestured && !document.hidden) sndHit(AUTO_VOL * volOf('auto'));
         const rate = Math.max(2, Math.min(8, 1 + Math.log10(dps)));
         autoSndWait = (0.7 + Math.random() * 0.6) / rate;
       }
