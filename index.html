@@ -573,7 +573,7 @@
         </svg>
       </button>
     </div>
-    <div class="hint">画面のどこでもクリック・タップで破壊！与えたダメージがそのままスクラップになります</div>
+    <div class="hint">画面のどこでもクリック・タップ、または表示中のキーと同じキーを押して破壊！与えたダメージがそのままスクラップになります</div>
   </section>
 
   <aside class="shop" id="shop" aria-label="ショップ">
@@ -787,6 +787,9 @@
     // 叩く
     { id: 'hit100k', ico: '🦾', name: '指が覚えている', desc: '100,000回叩く', ok: () => S.clicks >= 1e5 },
     { id: 'hit1m', ico: '🏔️', name: '百万打', desc: '1,000,000回叩く', ok: () => S.clicks >= 1e6 },
+    { id: 'keys100', ico: '⌨️', name: 'タイピスト', desc: 'キーボードで100回叩く', ok: () => S.keys >= 100 },
+    { id: 'keys1000', ico: '🎹', name: 'ブラインドタッチ', desc: 'キーボードで1,000回叩く', ok: () => S.keys >= 1000 },
+    { id: 'keys10000', ico: '✍️', name: '速記者', desc: 'キーボードで10,000回叩く', ok: () => S.keys >= 10000 },
     { id: 'crit1000', ico: '🗡️', name: '必殺仕事人', desc: '会心を1,000回出す', ok: () => S.crits >= 1000 },
     { id: 'crit10000', ico: '⚔️', name: '一撃必殺', desc: '会心を10,000回出す', ok: () => S.crits >= 10000 },
     { id: 'combo100', ico: '🌪️', name: '千手', desc: '連打ボーナスを +100% まで伸ばす', ok: () => S.maxCombo >= 100 },
@@ -1700,6 +1703,7 @@
       ['実績', `${achOwned} / ${ACH.length}`],
       ['叩く'],
       ['叩いた回数', fmt(S.clicks)],
+      ['うちキーボードで', fmt(S.keys)],
       ['会心の回数', fmt(S.crits)],
       ['1打の最高ダメージ', fmt(S.maxHit)],
       ['連打ボーナスの最高', '+' + S.maxCombo + '%'],
@@ -1773,6 +1777,19 @@
   }
 
   // ---------- 入力 ----------
+  // キーボード: いま画面に出ているキー(例: 「A」)と同じキーを押したときだけ叩ける。押しっぱなしは数えない
+  window.addEventListener('keydown', e => {
+    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (document.querySelector('dialog[open]')) return; // 小窓を開いている間は叩かない
+    // 日本語入力が入っていても拾えるよう、文字ではなく押されたキーの位置から判定する
+    const ch = /^Key[A-Z]$/.test(e.code) ? e.code[3]
+      : /^(Digit|Numpad)\d$/.test(e.code) ? e.code.slice(-1)
+      : e.key.length === 1 ? e.key.toUpperCase() : '';
+    if (ch !== ORDER[(S.level - 1) % ORDER.length]) return;
+    e.preventDefault();
+    S.keys++;
+    hit(null, null);
+  });
   // 画面のどこを押しても叩ける。ショップ・上のボタン・小窓・金のキーは、それぞれの操作を優先する
   document.addEventListener('pointerdown', e => {
     if (e.button > 0) return;
