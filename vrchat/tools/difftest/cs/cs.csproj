@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><Nullable>disable</Nullable><LangVersion>9.0</LangVersion>
+  <EnableDefaultCompileItems>false</EnableDefaultCompileItems><NoWarn>CS0649;CS0414;CS0169;CS0108;CS0618;CS0219;CS0168;CS8632;CS1701;CS1702;MSB3277;MSB3243</NoWarn><InvariantGlobalization>true</InvariantGlobalization></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../Assets/KeyswitchCrusher/Scripts/*.cs" />
+    <Compile Include="Stub.cs;Driver.cs" />
+  </ItemGroup>
+</Project>

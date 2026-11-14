@@ -19,6 +19,10 @@
 
 `index.html` をブラウザで開くだけで動きます。外部のライブラリや通信は使わず、このフォルダだけで完結しています。
 
+## VRChat ワールド版
+
+`vrchat/` に、同じゲームを VRChat のワールドにしたものがあります(UdonSharp)。組み立て方は [vrchat/README.md](vrchat/README.md) を見てください。
+
 ## 音源
 
 青軸・茶軸・赤軸・黒軸・銀軸の打鍵音は録音で、[The Listening Museum(sheets.works)](https://sheets.works/data-viz/keyboard-sounds)の音源集から取得しました。同ページによる出どころは次のとおりです。
